@@ -7,7 +7,7 @@
 # ORDERS Bounded Context
 
 # Command side controllers
-POST    /raffle                           controllers.raffle.RaffleCommandController.createOrder
+POST    /raffle                           controllers.raffle.RaffleCommandController.createRaffle
 POST    /raffle/:number                   controllers.raffle.RaffleCommandController.addParticipant(number: String)
 DELETE  /raffle/:number/:name             controllers.raffle.RaffleCommandController.removeParticipant(number: String, name: String)
 POST    /raffle/:number/run               controllers.raffle.RaffleCommandController.run(number: String)

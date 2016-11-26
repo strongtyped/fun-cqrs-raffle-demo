@@ -12,7 +12,7 @@ sealed trait Raffle extends AggregateLike {
   type Protocol = RaffleProtocol.type
 }
 
-case class EmptyRaffle(id: RaffleId, numOfPrizes: Int) extends Raffle {
+case class EmptyRaffle(id: RaffleId) extends Raffle {
 
   import RaffleProtocol._
 
@@ -25,7 +25,7 @@ case class EmptyRaffle(id: RaffleId, numOfPrizes: Int) extends Raffle {
     action[Raffle]
       .rejectCommand {
         // can't run if there is no participants
-        case _: Run.type =>
+        case _: Run =>
           new IllegalArgumentException("Raffle has no participants")
       }
     // format: on
@@ -43,14 +43,13 @@ case class EmptyRaffle(id: RaffleId, numOfPrizes: Int) extends Raffle {
       .handleEvent { evt: ParticipantAdded =>
         NonEmptyRaffle(
           participants = List(evt.name),
-          numOfPrizes = numOfPrizes,
           id           = id
         )
       }
     // format: on
 }
 
-case class NonEmptyRaffle(participants: List[String], numOfPrizes: Int, id: RaffleId) extends Raffle {
+case class NonEmptyRaffle(participants: List[String], id: RaffleId) extends Raffle {
 
   import RaffleProtocol._
 
@@ -113,7 +112,7 @@ case class NonEmptyRaffle(participants: List[String], numOfPrizes: Int, id: Raff
         val newParticipants = participants.filter(_ != evt.name)
         // NOTE: if last participant is removed, transition back to EmptyRaffle
         if (newParticipants.isEmpty)
-          EmptyRaffle(id, numOfPrizes)
+          EmptyRaffle(id)
         else
           copy(participants = newParticipants)
       }
@@ -127,8 +126,8 @@ case class NonEmptyRaffle(participants: List[String], numOfPrizes: Int, id: Raff
     // format: off
     actions[Raffle]
       .handleCommand {
-        cmd: Run.type =>
-          val winners = selectWinners()
+        cmd: Run =>
+          val winners = selectWinners(cmd.numOfPrizes)
           WinnerSelected(winners, OffsetDateTime.now, id)
       }
       .handleEvent {
@@ -137,7 +136,7 @@ case class NonEmptyRaffle(participants: List[String], numOfPrizes: Int, id: Raff
       }
     // format: on
 
-  private def selectWinners(): List[String] = {
+  private def selectWinners(numOfPrizes: Int): List[String] = {
 
     def pickOne(candidates: List[String], selection: List[String]): List[String] = {
       if (candidates.isEmpty) selection
@@ -176,7 +175,7 @@ object RaffleProtocol extends ProtocolLike {
   // Commands ============================================================
   sealed trait RaffleCommand extends ProtocolCommand
   // Creation Command
-  case class CreateRaffle(numOfPrizes: Int) extends RaffleCommand
+  case object CreateRaffle extends RaffleCommand
 
   // Update Commands
   case class AddParticipant(name: String) extends RaffleCommand
@@ -185,7 +184,7 @@ object RaffleProtocol extends ProtocolLike {
 
   case object RemoveAllParticipants extends RaffleCommand
 
-  case object Run extends RaffleCommand
+  case class Run(numOfPrizes: Int) extends RaffleCommand
 
   // Events ============================================================
   sealed trait RaffleEvent extends ProtocolEvent {
@@ -193,7 +192,7 @@ object RaffleProtocol extends ProtocolLike {
   }
 
   // Creation Event
-  case class RaffleCreated(raffleId: RaffleId, numOfPrizes: Int) extends RaffleEvent
+  case class RaffleCreated(raffleId: RaffleId) extends RaffleEvent
   // Update Events
   sealed trait RaffleUpdateEvent extends RaffleEvent
   case class ParticipantAdded(name: String, raffleId: RaffleId) extends RaffleUpdateEvent
@@ -215,11 +214,11 @@ object Raffle {
   def factory(raffleId: RaffleId) =
     // format: off
     actions[Raffle]
-      .handleCommand { cmd: CreateRaffle =>
-        RaffleCreated(raffleId, cmd.numOfPrizes)
+      .handleCommand { cmd: CreateRaffle.type =>
+        RaffleCreated(raffleId)
       }
       .handleEvent { evt: RaffleCreated =>
-        EmptyRaffle(id = raffleId, evt.numOfPrizes)
+        EmptyRaffle(id = raffleId)
       }
     // format: on
 

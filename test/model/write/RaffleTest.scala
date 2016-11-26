@@ -19,12 +19,12 @@ class RaffleTest extends FunSuite with Matchers with OptionValues with TryValues
       val raffle = raffleRef(id)
 
       // send all commands
-      raffle ! CreateRaffle(2)
+      raffle ! CreateRaffle
       raffle ! AddParticipant("John")
       raffle ! AddParticipant("Paul")
       raffle ! AddParticipant("George")
       raffle ! AddParticipant("Ringo")
-      raffle ! Run
+      raffle ! Run(2)
 
       // assert that expected events were produced
       expectEvent[RaffleCreated]
@@ -43,13 +43,13 @@ class RaffleTest extends FunSuite with Matchers with OptionValues with TryValues
 
       val raffle = raffleRef(id)
 
-      raffle ! CreateRaffle(1)
+      raffle ! CreateRaffle
       raffle ! AddParticipant("John")
       raffle ! AddParticipant("Paul")
-      raffle ! Run
+      raffle ! Run(1)
 
       intercept[RaffleHasAlreadyAWinner] {
-        raffle ! Run
+        raffle ! Run(1)
       }
     }
 
@@ -61,10 +61,10 @@ class RaffleTest extends FunSuite with Matchers with OptionValues with TryValues
 
       val raffle = raffleRef(id)
 
-      raffle ! CreateRaffle(1)
+      raffle ! CreateRaffle
 
       intercept[IllegalArgumentException] {
-        raffle ! Run
+        raffle ! Run(1)
       }.getMessage shouldBe "Raffle has no participants"
     }
 
@@ -76,10 +76,10 @@ class RaffleTest extends FunSuite with Matchers with OptionValues with TryValues
 
       val raffle = raffleRef(id)
 
-      raffle ! CreateRaffle(1)
+      raffle ! CreateRaffle
       raffle ! AddParticipant("John")
       raffle ! AddParticipant("John")
-      
+
       expectEvent[RaffleCreated]
       expectEvent[ParticipantAdded]
       expectEvent[DoubleBookingRejected]
@@ -94,7 +94,7 @@ class RaffleTest extends FunSuite with Matchers with OptionValues with TryValues
 
       val raffle = raffleRef(id)
 
-      raffle ! CreateRaffle(1)
+      raffle ! CreateRaffle
       raffle ! AddParticipant("John")
       raffle ! AddParticipant("Paul")
       raffle ! RemoveAllParticipants
@@ -108,10 +108,10 @@ class RaffleTest extends FunSuite with Matchers with OptionValues with TryValues
 
       val raffle = raffleRef(id)
 
-      raffle ! CreateRaffle(1)
+      raffle ! CreateRaffle
       raffle ! AddParticipant("John")
       raffle ! AddParticipant("Paul")
-      raffle ! Run
+      raffle ! Run(1)
 
       intercept[RaffleHasAlreadyAWinner] {
         raffle ! RemoveAllParticipants // resetting is illegal if a winner is selected
@@ -126,10 +126,10 @@ class RaffleTest extends FunSuite with Matchers with OptionValues with TryValues
 
       val raffle = raffleRef(id)
 
-      raffle ! CreateRaffle(1)
+      raffle ! CreateRaffle
       raffle ! AddParticipant("John")
       raffle ! AddParticipant("Paul")
-      raffle ! Run
+      raffle ! Run(1)
 
       intercept[RaffleHasAlreadyAWinner] {
         raffle ! AddParticipant("Ringo") // adding new participant is illegal if a winner is selected

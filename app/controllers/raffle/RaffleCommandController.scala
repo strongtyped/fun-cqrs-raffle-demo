@@ -12,18 +12,18 @@ import scala.util.control.NonFatal
 
 class RaffleCommandController(orderAkkaBackend: RaffleAkkaBackend) extends Controller {
 
-  case class Start(name: String, numOfPrizes: Int)
+  case class Start(name: String)
   object Start {
     implicit val format = Json.format[Start]
   }
 
   // POST
-  def createOrder = Action.async(parse.json[Start]) { req =>
-    val orderNumber = RaffleId(req.body.name)
-    val cmd         = CreateRaffle(req.body.numOfPrizes)
+  def createRaffle = Action.async(parse.json[Start]) { req =>
+    val raffleId = RaffleId(req.body.name)
+    val cmd      = CreateRaffle
 
-    sendCommand(orderNumber, cmd) {
-      Created("Raffle created").withHeaders("Location" -> s"/raffle/${orderNumber.value}")
+    sendCommand(raffleId, cmd) {
+      Created("Raffle created").withHeaders("Location" -> s"/raffle/${raffleId.value}")
     }
   }
 
@@ -50,10 +50,14 @@ class RaffleCommandController(orderAkkaBackend: RaffleAkkaBackend) extends Contr
   }
   // --------------------------------------------------------------------------
 
-  // -- Pay order
+  case class RunIt(numOfPrizes: Int)
+  object RunIt {
+    implicit val format = Json.format[RunIt]
+  }
+  // -- Run
   // POST
-  def run(raffleId: String) = Action.async { req =>
-    sendCommand(RaffleId(raffleId), Run) {
+  def run(raffleId: String) = Action.async(parse.json[RunIt]) { req =>
+    sendCommand(RaffleId(raffleId), Run(req.body.numOfPrizes)) {
       Ok("Raffle was run.")
     }
   }
