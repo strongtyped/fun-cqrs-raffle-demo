@@ -14,6 +14,7 @@ trait RaffleComponent {
   lazy val raffleBackend = wire[RaffleAkkaBackend]
 
   lazy val raffleDetailsRepo = wire[RaffleViewRepo]
+  lazy val reportRepo        = wire[ReportRepo]
 
   // format: off
   raffleBackend
@@ -24,6 +25,12 @@ trait RaffleComponent {
       projection(
         query      = QueryByTag(Raffle.tag),
         projection = wire[RaffleViewProjection]
+      )
+    }
+    .configure {
+      projection(
+        query      = QueryByTag(Raffle.tag),
+        projection = wire[ReportProjection]
       )
     }
   // format: on

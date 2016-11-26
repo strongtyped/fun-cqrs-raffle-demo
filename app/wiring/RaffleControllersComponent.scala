@@ -1,7 +1,7 @@
 package wiring
 
 import com.softwaremill.macwire._
-import controllers.orders.{ RaffleCommandController, RaffleQueryController }
+import controllers.raffle.{ RaffleCommandController, RaffleQueryController }
 
 trait RaffleControllersComponent extends RaffleComponent {
 

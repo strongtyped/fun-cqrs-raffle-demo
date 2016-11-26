@@ -88,6 +88,7 @@ case class NonEmptyRaffle(participants: List[String], numOfPrizes: Int, id: Raff
       .handleEvent { evt: ParticipantAdded =>
         copy(participants = evt.name :: participants)
       }
+      .handleEvent { _: DoubleBookingRejected => this}
     // format: on
 
   /**
@@ -231,8 +232,8 @@ object Raffle {
           raffle.acceptParticipants
 
       case raffle: NonEmptyRaffle =>
-        raffle.rejectDoubleBooking ++
-          raffle.acceptParticipants ++
+//        raffle.rejectDoubleBooking ++
+        raffle.acceptParticipants ++
           raffle.removeParticipants ++
           raffle.runTheRaffle
 

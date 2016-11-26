@@ -1,11 +1,11 @@
-package controllers.orders
+package controllers.raffle
 
-import backend.RaffleViewRepo
+import backend.{ RaffleViewRepo, ReportRepo }
 import model.RaffleId
 import play.api.libs.json.Json
 import play.api.mvc.{ Action, Controller }
 
-class RaffleQueryController(raffleDetailsRepo: RaffleViewRepo) extends Controller {
+class RaffleQueryController(raffleDetailsRepo: RaffleViewRepo, reportRepo: ReportRepo) extends Controller {
 
   def view(id: String) = Action {
     raffleDetailsRepo
@@ -19,5 +19,14 @@ class RaffleQueryController(raffleDetailsRepo: RaffleViewRepo) extends Controlle
   def list = Action {
     val raffles = raffleDetailsRepo.fetchAll
     Ok(Json.toJson(raffles))
+  }
+
+  def report(id: String) = Action {
+    reportRepo
+      .find(RaffleId(id))
+      .map { report =>
+        Ok(Json.toJson(report))
+      }
+      .getOrElse { NotFound(s"No report found for id $id") }
   }
 }

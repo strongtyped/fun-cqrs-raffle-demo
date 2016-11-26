@@ -7,16 +7,18 @@
 # ORDERS Bounded Context
 
 # Command side controllers
-POST    /raffle                           controllers.orders.RaffleCommandController.createOrder
-POST    /raffle/:number                   controllers.orders.RaffleCommandController.addParticipant(number: String)
-DELETE  /raffle/:number/:name             controllers.orders.RaffleCommandController.removeParticipant(number: String, name: String)
-POST    /raffle/:number/run               controllers.orders.RaffleCommandController.run(number: String)
+POST    /raffle                           controllers.raffle.RaffleCommandController.createOrder
+POST    /raffle/:number                   controllers.raffle.RaffleCommandController.addParticipant(number: String)
+DELETE  /raffle/:number/:name             controllers.raffle.RaffleCommandController.removeParticipant(number: String, name: String)
+POST    /raffle/:number/run               controllers.raffle.RaffleCommandController.run(number: String)
 
 
 ## Query side controllers
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-GET     /raffle/:number                   controllers.orders.RaffleQueryController.view(number)
-GET     /raffles                          controllers.orders.RaffleQueryController.list()
+GET     /raffle/:number                   controllers.raffle.RaffleQueryController.view(number: String)
+GET     /raffles                          controllers.raffle.RaffleQueryController.list()
+
+GET     /raffle/:number/report            controllers.raffle.RaffleQueryController.report(number: String)
 
 
 # Map static resources from the /public folder to the /assets URL path

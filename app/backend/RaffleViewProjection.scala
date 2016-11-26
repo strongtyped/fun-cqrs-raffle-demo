@@ -33,6 +33,8 @@ class RaffleViewProjection(repo: RaffleViewRepo) extends Projection {
 
       case e: ParticipantRemoved =>
         view.copy(participants = view.participants.filter(_.name != e.name))
+
+      case _ => view
     }
   }
 

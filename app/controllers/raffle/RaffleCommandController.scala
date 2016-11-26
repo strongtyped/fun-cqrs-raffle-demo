@@ -1,4 +1,4 @@
-package controllers.orders
+package controllers.raffle
 
 import backend.RaffleAkkaBackend
 import model.RaffleId
