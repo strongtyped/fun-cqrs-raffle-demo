@@ -143,7 +143,7 @@ case class NonEmptyRaffle(participants: List[String], id: RaffleId) extends Raff
       else if (selection.size < numOfPrizes) {
         val index  = Random.nextInt(candidates.size)
         val winner = participants(index)
-        val cand   = participants.drop(index)
+        val cand   = participants.filter(_ != winner)
         pickOne(cand, winner :: selection)
       } else selection
     }
