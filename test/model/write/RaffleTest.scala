@@ -78,10 +78,12 @@ class RaffleTest extends FunSuite with Matchers with OptionValues with TryValues
 
       raffle ! CreateRaffle(1)
       raffle ! AddParticipant("John")
-
-      intercept[IllegalArgumentException] {
-        raffle ! AddParticipant("John")
-      }.getMessage shouldBe "Participant John already added!"
+      raffle ! AddParticipant("John")
+      
+      expectEvent[RaffleCreated]
+      expectEvent[ParticipantAdded]
+      expectEvent[DoubleBookingRejected]
+      expectNoMoreEvents()
     }
 
   }
@@ -95,11 +97,9 @@ class RaffleTest extends FunSuite with Matchers with OptionValues with TryValues
       raffle ! CreateRaffle(1)
       raffle ! AddParticipant("John")
       raffle ! AddParticipant("Paul")
-
       raffle ! RemoveAllParticipants
 
     }
-
   }
 
   test("Illegal to Reset a raffle that has a winner already") {
