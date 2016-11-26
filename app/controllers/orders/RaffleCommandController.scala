@@ -23,7 +23,7 @@ class RaffleCommandController(orderAkkaBackend: RaffleAkkaBackend) extends Contr
     val cmd         = CreateRaffle(req.body.numOfPrizes)
 
     sendCommand(orderNumber, cmd) {
-      Created("Raffle was run. We have a winner!!").withHeaders("Location" -> s"/raffle/${orderNumber.value}")
+      Created("Raffle created").withHeaders("Location" -> s"/raffle/${orderNumber.value}")
     }
   }
 
@@ -54,7 +54,7 @@ class RaffleCommandController(orderAkkaBackend: RaffleAkkaBackend) extends Contr
   // POST
   def run(raffleId: String) = Action.async { req =>
     sendCommand(RaffleId(raffleId), Run) {
-      Ok("Order was payed")
+      Ok("Raffle was run.")
     }
   }
   // --------------------------------------------------------------------------
