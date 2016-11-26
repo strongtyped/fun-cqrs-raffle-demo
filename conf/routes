@@ -1,0 +1,23 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ORDERS Bounded Context
+
+# Command side controllers
+POST    /raffle                           controllers.orders.RaffleCommandController.createOrder
+POST    /raffle/:number                   controllers.orders.RaffleCommandController.addParticipant(number: String)
+DELETE  /raffle/:number/:name             controllers.orders.RaffleCommandController.removeParticipant(number: String, name: String)
+POST    /raffle/:number/run               controllers.orders.RaffleCommandController.run(number: String)
+
+
+## Query side controllers
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+GET     /raffle/:number                   controllers.orders.RaffleQueryController.view(number)
+GET     /raffles                          controllers.orders.RaffleQueryController.list()
+
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
