@@ -60,8 +60,6 @@ case class NonEmptyRaffle(participants: List[String], numOfPrizes: Int, id: Raff
     */
   def rejectDoubleBooking = {
 
-    def hasParticipant(name: String) = participants.contains(name)
-
     // format: off
     action[Raffle]
       .rejectCommand {
@@ -72,6 +70,8 @@ case class NonEmptyRaffle(participants: List[String], numOfPrizes: Int, id: Raff
     // format: on
   }
 
+  def hasParticipant(name: String) = participants.contains(name)
+
   /**
     * Action: add a participant
     * Applicable as long as we don't have a winner
@@ -80,7 +80,10 @@ case class NonEmptyRaffle(participants: List[String], numOfPrizes: Int, id: Raff
     // format: off
     actions[Raffle]
       .handleCommand { cmd: AddParticipant =>
-        ParticipantAdded(cmd.name, id)
+        if (hasParticipant(cmd.name))
+          DoubleBookingRejected(cmd.name, id)
+        else 
+          ParticipantAdded(cmd.name, id)
       }
       .handleEvent { evt: ParticipantAdded =>
         copy(participants = evt.name :: participants)
@@ -194,6 +197,7 @@ object RaffleProtocol extends ProtocolLike {
   sealed trait RaffleUpdateEvent extends RaffleEvent
   case class ParticipantAdded(name: String, raffleId: RaffleId) extends RaffleUpdateEvent
   case class ParticipantRemoved(name: String, raffleId: RaffleId) extends RaffleUpdateEvent
+  case class DoubleBookingRejected(name: String, raffleId: RaffleId) extends RaffleUpdateEvent
   case class WinnerSelected(winners: List[String], date: OffsetDateTime, raffleId: RaffleId) extends RaffleUpdateEvent
 
 }
