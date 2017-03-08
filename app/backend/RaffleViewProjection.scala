@@ -1,24 +1,17 @@
 package backend
-import io.funcqrs.Projection
-import io.funcqrs.HandleEvent
-import model.read.RaffleView
-import model.read.Participant
-import model.write.RaffleProtocol._
+import model.read.{ Participant, RaffleView }
+import model.write._
 
-import scala.concurrent.Future
+class RaffleViewProjection(repo: RaffleViewRepo) extends SyncProjection {
 
-class RaffleViewProjection(repo: RaffleViewRepo) extends Projection {
-
-  def handleEvent: HandleEvent = {
+  def receiveEventSync: ReceiveEventSync = {
 
     case e: RaffleCreated =>
-      Future.successful(repo.save(RaffleView(id = e.raffleId)))
+      repo.save(RaffleView(id = e.raffleId))
 
     case e: RaffleUpdateEvent =>
-      Future.successful {
-        repo.updateById(e.raffleId) { lot =>
-          updateFunc(lot, e)
-        }
+      repo.updateById(e.raffleId) { lot =>
+        updateFunc(lot, e)
       }
   }
 
@@ -28,7 +21,7 @@ class RaffleViewProjection(repo: RaffleViewRepo) extends Projection {
       case e: ParticipantAdded =>
         view.copy(participants = view.participants :+ newParticipant(e))
 
-      case e: WinnerSelected =>
+      case e: WinnersSelected =>
         view.copy(winners = e.winners, runDate = Some(e.date))
 
       case e: ParticipantRemoved =>

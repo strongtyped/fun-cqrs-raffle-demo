@@ -16,10 +16,9 @@ trait RaffleComponent {
   lazy val raffleDetailsRepo = wire[RaffleViewRepo]
   lazy val reportRepo        = wire[ReportRepo]
 
-  // format: off
   raffleBackend
     .configure {
-      aggregate[Raffle](Raffle.behavior)
+      aggregate(Raffle.behavior)
     }
     .configure {
       projection(
@@ -33,5 +32,4 @@ trait RaffleComponent {
         projection = wire[ReportProjection]
       )
     }
-  // format: on
 }

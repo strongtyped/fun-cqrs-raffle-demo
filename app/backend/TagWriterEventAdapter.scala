@@ -1,8 +1,7 @@
 package backend
 
 import akka.persistence.journal.{ Tagged, WriteEventAdapter }
-import model.write.Raffle
-import model.write.RaffleProtocol._
+import model.write.{ Raffle, RaffleEvent }
 
 class TagWriterEventAdapter extends WriteEventAdapter {
 

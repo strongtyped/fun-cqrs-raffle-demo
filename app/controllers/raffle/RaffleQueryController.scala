@@ -16,6 +16,15 @@ class RaffleQueryController(raffleDetailsRepo: RaffleViewRepo, reportRepo: Repor
       .getOrElse { NotFound(s"No raffle found for id $id") }
   }
 
+  def winners(id: String) = Action {
+    raffleDetailsRepo
+      .find(RaffleId(id))
+      .map { raffle =>
+        Ok(Json.toJson(raffle.winners))
+      }
+      .getOrElse { NotFound(s"No raffle found for id $id") }
+  }
+
   def list = Action {
     val raffles = raffleDetailsRepo.fetchAll
     Ok(Json.toJson(raffles))

@@ -16,6 +16,7 @@ POST    /raffle/:number/run               controllers.raffle.RaffleCommandContro
 ## Query side controllers
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 GET     /raffle/:number                   controllers.raffle.RaffleQueryController.view(number: String)
+GET     /raffle/:number/winners           controllers.raffle.RaffleQueryController.winners(number: String)
 GET     /raffles                          controllers.raffle.RaffleQueryController.list()
 
 GET     /raffle/:number/report            controllers.raffle.RaffleQueryController.report(number: String)

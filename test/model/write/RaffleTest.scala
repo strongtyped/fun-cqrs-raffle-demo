@@ -8,8 +8,6 @@ import org.scalatest._
 
 class RaffleTest extends FunSuite with Matchers with OptionValues with TryValues {
 
-  import RaffleProtocol._
-
   val id = RaffleId("test-raffle")
 
   test("Run a Raffle") {
@@ -32,7 +30,7 @@ class RaffleTest extends FunSuite with Matchers with OptionValues with TryValues
       expectEventPF { case ParticipantAdded("Paul", _) => () }
       expectEvent[ParticipantAdded].name shouldBe "George"
       expectEvent[ParticipantAdded].name shouldBe "Ringo"
-      expectEvent[WinnerSelected].winners should have size 2
+      expectEvent[WinnersSelected].winners should have size 2
     }
 
   }
@@ -138,18 +136,40 @@ class RaffleTest extends FunSuite with Matchers with OptionValues with TryValues
 
   }
 
+  test("Run a Raffle with 1000 participants") {
+
+    new RaffleInMemoryTest {
+
+      val raffle = raffleRef(id)
+
+      // send all commands
+      raffle ! CreateRaffle
+      for (i <- 0 to 1000)
+        raffle ! AddParticipant(s"participant $i")
+
+      raffle ! Run(40)
+
+      // assert that expected events were produced
+      expectEvent[RaffleCreated]
+      val winners = lookupExpectedEvent[WinnersSelected].winners
+      winners should have size 40
+      winners.toSet should have size 40
+    }
+
+  }
+
   class RaffleInMemoryTest extends InMemoryTestSupport {
 
     def configure(backend: InMemoryBackend): Unit = {
       // ---------------------------------------------
       // aggregate config - write model
       backend.configure {
-        aggregate[Raffle](Raffle.behavior)
+        aggregate(Raffle.behavior)
       }
 
     }
 
-    def raffleRef(id: RaffleId) = aggregateRef[Raffle](id)
+    def raffleRef(id: RaffleId) = backend.aggregateRef[Raffle].forId(id)
   }
 
 }

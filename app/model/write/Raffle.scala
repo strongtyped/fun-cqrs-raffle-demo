@@ -1,57 +1,53 @@
 package model.write
 
 import java.time.OffsetDateTime
+
 import io.funcqrs._
 import io.funcqrs.behavior._
+import io.funcqrs.behavior.handlers._
 import model.RaffleId
 
 import scala.util.Random
 
-sealed trait Raffle extends AggregateLike {
-  type Id       = RaffleId
-  type Protocol = RaffleProtocol.type
+sealed trait Raffle {
+  type Id = RaffleId
 }
 
 case class EmptyRaffle(id: RaffleId) extends Raffle {
-
-  import RaffleProtocol._
 
   /**
     * Action: reject Run command if has no participants
     * Only applicable when list of participants is empty
     */
   def canNotRunWithoutParticipants =
-    // format: off
-    action[Raffle]
+    Raffle.actions
       .rejectCommand {
         // can't run if there is no participants
-        case _: Run =>
+        case Run(_) =>
           new IllegalArgumentException("Raffle has no participants")
       }
-    // format: on
 
   /**
     * Action: add a participant
     * Applicable as long as we don't have a winner
     */
   def acceptParticipants =
-    // format: off
-    actions[Raffle]
-      .handleCommand { cmd: AddParticipant =>
-        ParticipantAdded(cmd.name, id)
+    Raffle.actions
+      .commandHandler {
+        OneEvent {
+          case AddParticipant(name) => ParticipantAdded(name, id)
+        }
       }
-      .handleEvent { evt: ParticipantAdded =>
-        NonEmptyRaffle(
-          participants = List(evt.name),
-          id           = id
-        )
+      .eventHandler {
+        case ParticipantAdded(name, _) =>
+          NonEmptyRaffle(
+            participants = List(name),
+            id           = id
+          )
       }
-    // format: on
 }
 
 case class NonEmptyRaffle(participants: List[String], id: RaffleId) extends Raffle {
-
-  import RaffleProtocol._
 
   /**
     * Action: reject double booking. Can't add the same participant twice
@@ -59,14 +55,12 @@ case class NonEmptyRaffle(participants: List[String], id: RaffleId) extends Raff
     */
   def rejectDoubleBooking = {
 
-    // format: off
-    action[Raffle]
+    Raffle.actions
       .rejectCommand {
         // can't add participant twice
         case cmd: AddParticipant if hasParticipant(cmd.name) =>
           new IllegalArgumentException(s"Participant ${cmd.name} already added!")
       }
-    // format: on
   }
 
   def hasParticipant(name: String) = participants.contains(name)
@@ -76,47 +70,46 @@ case class NonEmptyRaffle(participants: List[String], id: RaffleId) extends Raff
     * Applicable as long as we don't have a winner
     */
   def acceptParticipants =
-    // format: off
-    actions[Raffle]
-      .handleCommand { cmd: AddParticipant =>
-        if (hasParticipant(cmd.name))
-          DoubleBookingRejected(cmd.name, id)
-        else 
-          ParticipantAdded(cmd.name, id)
+    Raffle.actions
+      .commandHandler {
+        OneEvent {
+          case AddParticipant(name) if hasParticipant(name) => DoubleBookingRejected(name, id)
+          case AddParticipant(name)                         => ParticipantAdded(name, id)
+        }
       }
-      .handleEvent { evt: ParticipantAdded =>
-        copy(participants = evt.name :: participants)
+      .eventHandler {
+        case ParticipantAdded(name, _) => copy(participants = name :: participants)
       }
-      .handleEvent { _: DoubleBookingRejected => this}
-    // format: on
+      .eventHandler { case DoubleBookingRejected(_, _) => this }
 
   /**
     * Action: remove participants (single or all)
     * Only applicable if Raffle has participants
     */
   def removeParticipants() =
-    // format: off
-    actions[Raffle]
-      // removing participants (single or all) produce ParticipantRemoved events
-      .handleCommand { cmd: RemoveParticipant =>
-        ParticipantRemoved(cmd.name, id)
+    Raffle.actions
+    // removing participants (single or all) produce ParticipantRemoved events
+      .commandHandler {
+        OneEvent { case RemoveParticipant(name) => ParticipantRemoved(name, id) }
       }
-      .handleCommand {
-        // will produce a List[ParticipantRemoved]
-        cmd: RemoveAllParticipants.type =>
-          this.participants.map { name =>
-            ParticipantRemoved(name, id)
-          }
+      .commandHandler {
+        //  will produce a List[ParticipantRemoved]
+        ManyEvents {
+          case RemoveAllParticipants =>
+            this.participants.map { name =>
+              ParticipantRemoved(name, id)
+            }
+        }
       }
-      .handleEvent { evt: ParticipantRemoved =>
-        val newParticipants = participants.filter(_ != evt.name)
-        // NOTE: if last participant is removed, transition back to EmptyRaffle
-        if (newParticipants.isEmpty)
-          EmptyRaffle(id)
-        else
-          copy(participants = newParticipants)
+      .eventHandler {
+        case ParticipantRemoved(name, _) =>
+          val newParticipants = participants.filter(_ != name)
+          // NOTE: if last participant is removed, transition back to EmptyRaffle
+          if (newParticipants.isEmpty)
+            EmptyRaffle(id)
+          else
+            copy(participants = newParticipants)
       }
-    // format: off
 
   /**
     * Action: run the Raffle
@@ -124,31 +117,33 @@ case class NonEmptyRaffle(participants: List[String], id: RaffleId) extends Raff
     */
   def runTheRaffle =
     // format: off
-    actions[Raffle]
-      .handleCommand {
-        cmd: Run =>
-          val winners = selectWinners(cmd.numOfPrizes)
-          WinnerSelected(winners, OffsetDateTime.now, id)
+    Raffle.actions
+      .commandHandler {
+        OneEvent {
+          case Run(numOfPrizes) =>
+            val winners = selectWinners(numOfPrizes)
+            WinnersSelected(winners, OffsetDateTime.now, id)
+        }
       }
-      .handleEvent {
+      .eventHandler {
         // transition to end state on winner selection
-        evt: WinnerSelected => FinishedRaffle(evt.winners, id)
+      case WinnersSelected(winners, _, _) => FinishedRaffle(winners, id)
       }
     // format: on
 
   private def selectWinners(numOfPrizes: Int): List[String] = {
 
-    def pickOne(candidates: List[String], selection: List[String]): List[String] = {
-      if (candidates.isEmpty) selection
-      else if (selection.size < numOfPrizes) {
-        val index  = Random.nextInt(candidates.size)
-        val winner = participants(index)
-        val cand   = participants.filter(_ != winner)
-        pickOne(cand, winner :: selection)
-      } else selection
+    def pickOne(candidates: List[String], selection: List[String], prizes: Int): List[String] = {
+      if (candidates.isEmpty || prizes == 0) selection
+      else {
+        val index              = Random.nextInt(candidates.size)
+        val winner             = candidates(index)
+        val candidatesLeftOver = candidates.filter(_ != winner)
+        pickOne(candidatesLeftOver, winner :: selection, prizes - 1)
+      }
     }
 
-    pickOne(participants, List())
+    pickOne(participants, List(), numOfPrizes)
   }
 }
 
@@ -160,7 +155,7 @@ case class FinishedRaffle(winners: List[String], id: RaffleId) extends Raffle {
     */
   def rejectAllCommands =
     // format: off
-    action[Raffle]
+    Raffle.actions
       .rejectCommand {
         // no command can be accepted after having selected a winner
         case anyCommand  =>
@@ -170,42 +165,39 @@ case class FinishedRaffle(winners: List[String], id: RaffleId) extends Raffle {
 }
 
 /** Defines the Raffle Protocol, all Commands it may receive and Events it may emit */
-object RaffleProtocol extends ProtocolLike {
+// Commands ============================================================
+sealed trait RaffleCommand
+// Creation Command
+case object CreateRaffle extends RaffleCommand
 
-  // Commands ============================================================
-  sealed trait RaffleCommand extends ProtocolCommand
-  // Creation Command
-  case object CreateRaffle extends RaffleCommand
+// Update Commands
+case class AddParticipant(name: String) extends RaffleCommand
 
-  // Update Commands
-  case class AddParticipant(name: String) extends RaffleCommand
+case class RemoveParticipant(name: String) extends RaffleCommand
 
-  case class RemoveParticipant(name: String) extends RaffleCommand
+case object RemoveAllParticipants extends RaffleCommand
 
-  case object RemoveAllParticipants extends RaffleCommand
+case class Run(numOfPrizes: Int) extends RaffleCommand
 
-  case class Run(numOfPrizes: Int) extends RaffleCommand
-
-  // Events ============================================================
-  sealed trait RaffleEvent extends ProtocolEvent {
-    def raffleId: RaffleId
-  }
-
-  // Creation Event
-  case class RaffleCreated(raffleId: RaffleId) extends RaffleEvent
-  // Update Events
-  sealed trait RaffleUpdateEvent extends RaffleEvent
-  case class ParticipantAdded(name: String, raffleId: RaffleId) extends RaffleUpdateEvent
-  case class ParticipantRemoved(name: String, raffleId: RaffleId) extends RaffleUpdateEvent
-  case class DoubleBookingRejected(name: String, raffleId: RaffleId) extends RaffleUpdateEvent
-  case class WinnerSelected(winners: List[String], date: OffsetDateTime, raffleId: RaffleId) extends RaffleUpdateEvent
-
+// Events ============================================================
+sealed trait RaffleEvent {
+  def raffleId: RaffleId
 }
 
-object Raffle {
+// Creation Event
+case class RaffleCreated(raffleId: RaffleId) extends RaffleEvent
+// Update Events
+sealed trait RaffleUpdateEvent extends RaffleEvent
+case class ParticipantAdded(name: String, raffleId: RaffleId) extends RaffleUpdateEvent
+case class ParticipantRemoved(name: String, raffleId: RaffleId) extends RaffleUpdateEvent
+case class DoubleBookingRejected(name: String, raffleId: RaffleId) extends RaffleUpdateEvent
+case class WinnersSelected(winners: List[String], date: OffsetDateTime, raffleId: RaffleId) extends RaffleUpdateEvent
 
-  // import the protocol to have access to Commands and Events
-  import RaffleProtocol._
+object Raffle extends Types[Raffle] {
+
+  type Id      = RaffleId
+  type Command = RaffleCommand
+  type Event   = RaffleEvent
 
   // a tag for Raffle, useful to query the event store later on
   val tag = Tags.aggregateTag("Raffle")
@@ -213,19 +205,21 @@ object Raffle {
   // defines seed command and event handlers
   def factory(raffleId: RaffleId) =
     // format: off
-    actions[Raffle]
-      .handleCommand { cmd: CreateRaffle.type =>
-        RaffleCreated(raffleId)
+    actions
+      .commandHandler { 
+        OneEvent { 
+          case CreateRaffle => RaffleCreated(raffleId)
+        }
       }
-      .handleEvent { evt: RaffleCreated =>
-        EmptyRaffle(id = raffleId)
+      .eventHandler { 
+        case RaffleCreated(_) => EmptyRaffle(id = raffleId)
       }
     // format: on
 
-  def behavior(raffleId: RaffleId): Behavior[Raffle] =
-    Behavior {
+  def behavior(raffleId: RaffleId) =
+    Behavior.construct {
       factory(raffleId)
-    } {
+    } andThen {
       case raffle: EmptyRaffle =>
         raffle.canNotRunWithoutParticipants ++
           raffle.acceptParticipants

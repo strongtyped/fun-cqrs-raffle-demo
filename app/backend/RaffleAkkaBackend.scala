@@ -12,7 +12,8 @@ class RaffleAkkaBackend(val actorSystem: ActorSystem) extends AkkaBackend {
   def sourceProvider(query: Query): EventsSourceProvider =
     query match {
       case QueryByTag(tag) => new LevelDbTaggedEventsSource(tag)
+      case _               => new LevelDbTaggedEventsSource(Raffle.tag)
     }
 
-  def orderRef(number: RaffleId) = this.aggregateRef[Raffle](number)
+  def orderRef(number: RaffleId) = this.aggregateRef[Raffle].forId(number)
 }

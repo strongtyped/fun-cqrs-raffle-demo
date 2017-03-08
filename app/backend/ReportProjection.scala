@@ -2,11 +2,11 @@ package backend
 
 import model.RaffleId
 import model.read.Report
-import model.write.RaffleProtocol.{ DoubleBookingRejected, ParticipantAdded, RaffleCreated }
+import model.write.{ DoubleBookingRejected, ParticipantAdded, RaffleCreated }
 
 class ReportProjection(repo: ReportRepo) extends SyncProjection {
 
-  def handleEventSync: HandleEventSync = {
+  def receiveEventSync: ReceiveEventSync = {
     case evt: RaffleCreated         => repo.save(Report(evt.raffleId))
     case evt: ParticipantAdded      => updateReport(evt.raffleId, evt.name)
     case evt: DoubleBookingRejected => updateReport(evt.raffleId, evt.name)

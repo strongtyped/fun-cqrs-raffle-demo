@@ -2,7 +2,7 @@ package controllers.raffle
 
 import backend.RaffleAkkaBackend
 import model.RaffleId
-import model.write.RaffleProtocol._
+import model.write._
 import play.api.libs.json.Json
 import play.api.mvc._
 
@@ -41,7 +41,7 @@ class RaffleCommandController(orderAkkaBackend: RaffleAkkaBackend) extends Contr
     }
   // --------------------------------------------------------------------------
 
-  // -- Remove a participan
+  // -- Remove a participant
   // DELETE
   def removeParticipant(num: String, name: String) = Action.async {
     sendCommand(RaffleId(num), RemoveParticipant(name)) {
@@ -64,18 +64,20 @@ class RaffleCommandController(orderAkkaBackend: RaffleAkkaBackend) extends Contr
   // --------------------------------------------------------------------------
 
   private def sendCommand(number: RaffleId, cmd: RaffleCommand)(response: => Result): Future[Result] = {
-    (orderAkkaBackend.orderRef(number) ? cmd).map { _ =>
-      response
-    }.recoverWith {
-      case NonFatal(ex) =>
-        Future.successful {
-          BadRequest(
-            Json.obj(
-              "error" -> ex.getMessage,
-              "type" -> ex.getClass.getSimpleName
+    (orderAkkaBackend.orderRef(number) ? cmd)
+      .map { _ =>
+        response
+      }
+      .recoverWith {
+        case NonFatal(ex) =>
+          Future.successful {
+            BadRequest(
+              Json.obj(
+                "error" -> ex.getMessage,
+                "type" -> ex.getClass.getSimpleName
+              )
             )
-          )
-        }
-    }
+          }
+      }
   }
 }
